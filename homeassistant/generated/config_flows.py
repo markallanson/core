@@ -138,6 +138,7 @@ FLOWS = [
     "nut",
     "nws",
     "nzbget",
+    "octopus_energy",
     "omnilogic",
     "onewire",
     "onvif",

@@ -314,6 +314,7 @@ homeassistant/components/nut/* @bdraco
 homeassistant/components/nws/* @MatthewFlamm
 homeassistant/components/nzbget/* @chriscla
 homeassistant/components/obihai/* @dshokouhi
+homeassistant/components/octopus_energy/* @markallanson
 homeassistant/components/ohmconnect/* @robbiet480
 homeassistant/components/ombi/* @larssont
 homeassistant/components/omnilogic/* @oliver84 @djtimca @gentoosu

@@ -1,0 +1,24 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "gas_meter_point_details_incorrect": "Gas meter point details are incorrect",
+            "electricity_meter_point_details_incorrect": "Electricity meter point details are incorrect",
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "Host",
+                    "password": "Password",
+                    "username": "Username"
+                }
+            }
+        }
+    },
+    "title": "Octopus Energy"
+}

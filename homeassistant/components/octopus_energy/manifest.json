@@ -1,0 +1,16 @@
+{
+  "domain": "octopus_energy",
+  "name": "Octopus Energy",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/octopus_energy",
+  "requirements": [
+    "octopus-energy==0.1.9"
+  ],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@markallanson"
+  ]
+}
