@@ -1,22 +1,22 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from octopus_energy import Consumption, Meter, EnergyType
+from octopus_energy import Consumption, EnergyType, Meter
 
-from homeassistant.components.octopus_energy import DOMAIN, HaasOctopusEnergyClientWrapper
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+from homeassistant.components.octopus_energy import (
+    DOMAIN,
+    HaasOctopusEnergyClientWrapper,
+)
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
 
 
-class OctopusEnergyEntity(CoordinatorEntity):
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator,
-        uid: str,
-        name: str,
-        icon: str
-    ):
-        super().__init__(coordinator)
+class OctopusEnergyEntity(Entity):
+    def __init__(self, uid: str, name: str, icon: str):
         self._uid = uid
         self._name = name
         self._icon = icon
@@ -44,17 +44,13 @@ class OctopusEnergyEntity(CoordinatorEntity):
 
 
 class OctopusEnergyMeterEntity(OctopusEnergyEntity):
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator,
-        client_wrapper: HaasOctopusEnergyClientWrapper,
-        meter: Meter
-    ):
+    def __init__(self, client_wrapper: HaasOctopusEnergyClientWrapper, meter: Meter):
         super().__init__(
-            coordinator,
             f"{meter.energy_type.value}_{meter.serial_number}_meter",
             f"{meter.energy_type.value.title()} Meter ({meter.serial_number})",
-            "mdi:flash" if meter.energy_type == EnergyType.ELECTRICITY else "mdi:gas-cylinder"
+            "mdi:flash"
+            if meter.energy_type == EnergyType.ELECTRICITY
+            else "mdi:gas-cylinder",
         )
         self._meter: Meter = meter
         self._client_wrapper: HaasOctopusEnergyClientWrapper = client_wrapper
@@ -72,8 +68,10 @@ class OctopusEnergyMeterEntity(OctopusEnergyEntity):
             )
             if self._latest_consumption.intervals:
                 print(self._latest_consumption)
-            self._available = (self._latest_consumption is not None
-                               and self._latest_consumption.intervals)
+            self._available = (
+                self._latest_consumption is not None
+                and self._latest_consumption.intervals
+            )
         except:
             self._available = False
 
@@ -95,7 +93,7 @@ class OctopusEnergyMeterEntity(OctopusEnergyEntity):
 
         device_state_attributes = {
             "start_time": self._latest_consumption.intervals[0].interval_start,
-            "end_time": self._latest_consumption.intervals[0].interval_end
+            "end_time": self._latest_consumption.intervals[0].interval_end,
         }
         print(device_state_attributes)
         return device_state_attributes
