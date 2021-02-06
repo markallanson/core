@@ -2,9 +2,9 @@
   "domain": "octopus_energy",
   "name": "Octopus Energy",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/octopus_energy",
+  "documentation": "https://www.home-assistant.io/integrations/octopusenergy",
   "requirements": [
-    "octopus-energy==0.1.9"
+    "octopus-energy==0.1.11"
   ],
   "ssdp": [],
   "zeroconf": [],

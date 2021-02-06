@@ -1,18 +1,20 @@
 """The Octopus Energy integration."""
 import asyncio
+import logging
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from .config_flow import OctopusEnergyConfigError
 
-from .const import DOMAIN
+from .const import DOMAIN, ERR_NO_METERS, CONF_ACCOUNT_ID, CONF_API_KEY, PLATFORM
+from .service import HaasOctopusEnergyClientWrapper
+from ...exceptions import ConfigEntryNotReady
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-# TODO List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
-PLATFORMS = ["light"]
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -22,14 +24,18 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Octopus Energy from a config entry."""
-    # TODO Store an API object for your platforms to access
-    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
-
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
+    try:
+        client_wrapper = HaasOctopusEnergyClientWrapper(
+            entry.data[CONF_ACCOUNT_ID], entry.data[CONF_API_KEY]
         )
-
+        await client_wrapper.validate_login()
+    except:
+        _LOGGER.warning("Your authentication credentials are invalid or your account is inactive.")
+        raise ConfigEntryNotReady
+    else:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, PLATFORM)
+        )
     return True
 
 
@@ -38,8 +44,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     unload_ok = all(
         await asyncio.gather(
             *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
+                hass.config_entries.async_forward_entry_unload(entry, PLATFORM)
             ]
         )
     )
@@ -47,3 +52,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
