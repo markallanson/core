@@ -121,8 +121,10 @@ async def test_user_errors(
     assert result["errors"] == {"base": error}
 
     mock_pyvlx.connect.assert_awaited_once()
-    # On failure nothing is stored and no disconnect occurs.
+    # On failure nothing is stored, and the raw transport of the failed
+    # connection is closed without a full disconnect (no gateway reboot).
     mock_pyvlx.disconnect.assert_not_awaited()
+    mock_pyvlx.connection.disconnect.assert_called_once()
     assert hass.data.get(PYVLX_FROM_CONFIG_FLOW, {}).get("127.0.0.1") is None
 
     mock_pyvlx.connect.side_effect = None
@@ -236,6 +238,7 @@ async def test_reauth_errors(
 
     mock_pyvlx.connect.assert_awaited_once()
     mock_pyvlx.disconnect.assert_not_awaited()
+    mock_pyvlx.connection.disconnect.assert_called_once()
     assert hass.data.get(PYVLX_FROM_CONFIG_FLOW, {}).get("127.0.0.1") is None
 
     mock_pyvlx.connect.side_effect = None
@@ -319,6 +322,11 @@ async def test_dhcp_discovery_errors(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
     assert result["errors"] == {"base": error}
+
+    mock_pyvlx.connect.assert_awaited_once()
+    mock_pyvlx.disconnect.assert_not_awaited()
+    mock_pyvlx.connection.disconnect.assert_called_once()
+    assert hass.data.get(PYVLX_FROM_CONFIG_FLOW, {}).get("127.0.0.1") is None
 
     mock_pyvlx.connect.side_effect = None
 

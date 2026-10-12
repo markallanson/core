@@ -248,6 +248,10 @@ def mock_pyvlx(
     pyvlx.connect = AsyncMock()
     pyvlx.ensure_connected = AsyncMock()
     pyvlx.disconnect = AsyncMock()
+    # A fully established session has the house status monitor enabled;
+    # tests simulating a failure before the session is established
+    # override this to False.
+    pyvlx.klf200.house_status_monitor_enabled = True
 
     with (
         patch("homeassistant.components.velux.PyVLX", return_value=pyvlx),

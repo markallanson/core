@@ -32,6 +32,26 @@ type VeluxConfigEntry = ConfigEntry[VeluxData]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
+async def _async_close_gateway_session(pyvlx: PyVLX) -> None:
+    """Close the gateway session after a setup failure.
+
+    The KLF 200 only accepts a very limited number of connections and can
+    end up unresponsive if sessions are not closed. For a fully established
+    session, disconnect() is required: it disables the house status monitor
+    (otherwise the gateway refuses new SSL connections) and reboots the
+    gateway. For a session that was never fully established, closing the
+    transport is sufficient and avoids an unnecessary gateway reboot.
+    """
+    if pyvlx.klf200.house_status_monitor_enabled:
+        try:
+            await pyvlx.disconnect()
+        except OSError, PyVLXException:
+            LOGGER.exception("Error closing Velux gateway session")
+            pyvlx.connection.disconnect()
+        return
+    pyvlx.connection.disconnect()
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: VeluxConfigEntry) -> bool:
     """Set up the velux component."""
     host = entry.data[CONF_HOST]
@@ -52,6 +72,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: VeluxConfigEntry) -> boo
         LOGGER.debug("Retrieving nodes from %s", host)
         await pyvlx.load_nodes()
     except (OSError, PyVLXException) as ex:
+        # Close the connection now so a wedged or half-open session does not
+        # stay around (and pile up across retries) while the KLF 200 only
+        # supports a very limited number of concurrent connections.
+        await _async_close_gateway_session(pyvlx)
         # Since pyvlx raises the same exception for auth and connection errors,
         # we need to check the exception message to distinguish them.
         # Ultimately this should be fixed in pyvlx to raise specialized exceptions,

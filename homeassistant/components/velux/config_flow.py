@@ -24,6 +24,18 @@ USER_SCHEMA = probatio.Schema(
 )
 
 
+def _close_failed_connection(pyvlx: PyVLX) -> None:
+    """Close the transport of a connect() attempt that failed.
+
+    The KLF 200 only accepts a very limited number of connections and can
+    end up unresponsive if failed attempts are not closed. A full
+    disconnect() is not used here because it reboots the gateway, which is
+    not needed for a session that was never fully established (the house
+    status monitor is only enabled after a successful connect()).
+    """
+    pyvlx.connection.disconnect()
+
+
 async def _check_connection(
     host: str, password: str
 ) -> tuple[PyVLX | None, dict[str, str]]:
@@ -37,6 +49,7 @@ async def _check_connection(
     try:
         await pyvlx.connect()
     except (PyVLXException, ConnectionError) as err:
+        _close_failed_connection(pyvlx)
         # since pyvlx raises the same exception for auth and connection errors,
         # we need to check the exception message to distinguish them
         if (
@@ -49,6 +62,7 @@ async def _check_connection(
         LOGGER.debug("Cannot connect: %s", err)
         return None, {"base": "cannot_connect"}
     except Exception as err:  # noqa: BLE001
+        _close_failed_connection(pyvlx)
         LOGGER.exception("Unexpected exception: %s", err)
         return None, {"base": "unknown"}
 

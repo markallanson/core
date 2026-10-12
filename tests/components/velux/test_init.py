@@ -40,6 +40,10 @@ async def test_setup_retry_on_nodes_failure(
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     mock_pyvlx.load_scenes.assert_awaited_once()
     mock_pyvlx.load_nodes.assert_awaited_once()
+    # The session was fully established, so a full disconnect is required
+    # to free the connection on the KLF 200.
+    mock_pyvlx.disconnect.assert_awaited_once()
+    mock_pyvlx.connection.disconnect.assert_not_called()
 
 
 async def test_setup_retry_on_oserror_during_scenes(
@@ -60,6 +64,8 @@ async def test_setup_retry_on_oserror_during_scenes(
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     mock_pyvlx.load_scenes.assert_awaited_once()
     mock_pyvlx.load_nodes.assert_not_called()
+    mock_pyvlx.disconnect.assert_awaited_once()
+    mock_pyvlx.connection.disconnect.assert_not_called()
 
 
 async def test_setup_auth_error(
@@ -84,6 +90,55 @@ async def test_setup_auth_error(
 
     mock_pyvlx.load_scenes.assert_awaited_once()
     mock_pyvlx.load_nodes.assert_not_called()
+    mock_pyvlx.disconnect.assert_awaited_once()
+    mock_pyvlx.connection.disconnect.assert_not_called()
+
+
+async def test_setup_retry_on_connect_failure_closes_raw_transport(
+    mock_config_entry: ConfigEntry, hass: HomeAssistant, mock_pyvlx: AsyncMock
+) -> None:
+    """Test that a failure during ensure_connected closes the raw transport.
+
+    If the session was never fully established (the house status monitor is
+    not enabled), closing the transport is sufficient and the gateway must
+    not be rebooted via a full disconnect.
+    """
+
+    mock_pyvlx.ensure_connected.side_effect = PyVLXException("connect boom")
+    mock_pyvlx.klf200.house_status_monitor_enabled = False
+    mock_config_entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    mock_pyvlx.load_scenes.assert_not_called()
+    mock_pyvlx.disconnect.assert_not_awaited()
+    mock_pyvlx.connection.disconnect.assert_called_once()
+
+
+async def test_setup_auth_error_during_connect_closes_raw_transport(
+    mock_config_entry: ConfigEntry, hass: HomeAssistant, mock_pyvlx: AsyncMock
+) -> None:
+    """Test that an auth failure during ensure_connected closes the transport."""
+
+    mock_pyvlx.ensure_connected.side_effect = PyVLXException(
+        "Login to KLF 200 failed, check credentials"
+    )
+    mock_pyvlx.klf200.house_status_monitor_enabled = False
+    mock_config_entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+
+    flows = hass.config_entries.flow.async_progress()
+    assert len(flows) == 1
+    assert flows[0]["step_id"] == "reauth_confirm"
+
+    mock_pyvlx.disconnect.assert_not_awaited()
+    mock_pyvlx.connection.disconnect.assert_called_once()
 
 
 async def test_setup_uses_preconnected_pyvlx_from_config_flow(
